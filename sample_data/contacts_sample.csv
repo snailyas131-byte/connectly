@@ -1,0 +1,7 @@
+first_name,last_name,phone,alternate_phone,email,company,job_title,address,city,birthday,category,notes
+Sarah,Connor,+1 (555) 234-5678,+1 (555) 876-5432,sarah.connor@cyberdyne.io,Cyberdyne Systems,Chief Security Officer,100 Tech Blvd,San Francisco,1985-05-12,Work,Key executive contact
+Michael,Scott,555-123-4567,,michael.scott@dundermifflin.com,Dunder Mifflin,Regional Manager,1725 Slough Avenue,Scranton,1965-03-15,Clients,World's Best Boss
+Emily,Watson,+44 20 7946 0912,,emily.watson@oxford.edu,University of Oxford,Research Scholar,High Street,Oxford,1992-11-28,University,Met at AI conference
+David,Miller,555-901-2345,,david.miller@family.net,,,Austin,1990-08-20,Family,Brother in law
+Olivia,Taylor,+1 (555) 456-7890,+1 (555) 654-3210,olivia.taylor@friends.org,,,Seattle,1994-04-03,Friends,College roommate
+

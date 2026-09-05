@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}{{ contact.full_name }} &bull; Contact Profile{% endblock %}
+
+{% block content %}
+<div style="max-width: 960px; margin: 0 auto;">
+  <!-- Back Button Navigation -->
+  <div style="margin-bottom: 1.5rem;">
+    <a href="{{ url_for('contacts.dashboard') }}" class="btn btn-secondary btn-sm">
+      <i class="fas fa-arrow-left"></i> Back to Dashboard
+    </a>
+  </div>
+
+  <!-- Profile Hero Banner -->
+  <div class="contact-profile-header">
+    <div class="profile-identity">
+      {% if contact.profile_picture %}
+        <img 
+          src="{{ url_for('static', filename='uploads/avatars/' + contact.profile_picture) }}" 
+          alt="{{ contact.full_name }}" 
+          class="avatar-large"
+        >
+      {% else %}
+        <div class="avatar-initials-large">
+          {{ contact.initials }}
+        </div>
+      {% endif %}
+
+      <div>
+        <div class="profile-name">
+          <span>{{ contact.full_name }}</span>
+          {% if contact.is_favorite %}
+            <i class="fas fa-star" style="color: var(--star-gold); font-size: 1.35rem;" title="Favorite Contact"></i>
+          {% endif %}
+        </div>
+
+        {% if contact.job_title or contact.company %}
+          <p class="profile-headline">
+            {{ contact.job_title or '' }}{{ ' at ' if contact.job_title and contact.company else '' }}{{ contact.company or '' }}
+          </p>
+        {% endif %}
+
+        <div style="margin-top: 0.6rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          {% if contact.category_rel %}
+            <span class="contact-category-badge">{{ contact.category_rel.name }}</span>
+          {% else %}
+            <span class="contact-category-badge" style="background: var(--bg-tertiary); color: var(--text-muted);">Uncategorized</span>
+          {% endif %}
+
+          {% if contact.city %}
+            <span style="font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.3rem;">
+              <i class="fas fa-map-marker-alt" style="color: var(--text-muted);"></i> {{ contact.city }}
+            </span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick CTA & Actions -->
+    <div class="profile-actions">
+      <a href="{{ url_for('contacts.edit_contact', contact_id=contact.id) }}" class="btn btn-primary">
+        <i class="fas fa-pen"></i> Edit Contact
+      </a>
+
+      <button 
+        type="button" 
+        class="btn btn-danger-outline delete-contact-btn" 
+        data-id="{{ contact.id }}" 
+        data-name="{{ contact.full_name }}"
+        data-url="{{ url_for('contacts.delete_contact', contact_id=contact.id) }}"
+        title="Delete Contact"
+      >
+        <i class="fas fa-trash-alt"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Profile Details Grid -->
+  <div class="profile-grid">
+    <!-- Left Column: Contact Methods & Address -->
+    <div class="details-card-section">
+      <!-- Communication Info -->
+      <div class="card">
+        <div class="card-header">
+          <h3 style="font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-address-card" style="color: var(--primary);"></i> Contact Information
+          </h3>
+        </div>
+        <div class="card-body" style="padding: 0.75rem 1.5rem;">
+          <!-- Primary Phone -->
+          {% if contact.phone %}
+            <div class="detail-row">
+              <div class="detail-icon-wrap">
+                <i class="fas fa-phone"></i>
+              </div>
+              <div class="detail-content">
+                <div class="detail-label">Primary Phone</div>
+                <div class="detail-value">
+                  <a href="tel:{{ contact.phone }}">{{ contact.phone }}</a>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- Alternate Phone -->
+          {% if contact.alternate_phone %}
+            <div class="detail-row">
+              <div class="detail-icon-wrap">
+                <i class="fas fa-phone-volume"></i>
+              </div>
+              <div class="detail-content">
+                <div class="detail-label">Alternate Phone</div>
+                <div class="detail-value">
+                  <a href="tel:{{ contact.alternate_phone }}">{{ contact.alternate_phone }}</a>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- Email Address -->
+          {% if contact.email %}
+            <div class="detail-row">
+              <div class="detail-icon-wrap">
+                <i class="fas fa-envelope"></i>
+              </div>
+              <div class="detail-content">
+                <div class="detail-label">Email Address</div>
+                <div class="detail-value">
+                  <a href="mailto:{{ contact.email }}">{{ contact.email }}</a>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- Physical Address -->
+          {% if contact.address or contact.city %}
+            <div class="detail-row">
+              <div class="detail-icon-wrap">
+                <i class="fas fa-map-marked-alt"></i>
+              </div>
+              <div class="detail-content">
+                <div class="detail-label">Address</div>
+                <div class="detail-value">
+                  {{ contact.address }}{{ ', ' if contact.address and contact.city else '' }}{{ contact.city }}
+                </div>
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- Birthday -->
+          {% if contact.birthday %}
+            <div class="detail-row">
+              <div class="detail-icon-wrap">
+                <i class="fas fa-birthday-cake"></i>
+              </div>
+              <div class="detail-content">
+                <div class="detail-label">Birthday</div>
+                <div class="detail-value">
+                  {{ contact.birthday.strftime('%B %d, %Y') }}
+                </div>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Notes Card -->
+      {% if contact.notes %}
+        <div class="card">
+          <div class="card-header">
+            <h3 style="font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fas fa-sticky-note" style="color: var(--warning);"></i> Notes & Context
+            </h3>
+          </div>
+          <div class="card-body">
+            <div class="notes-box">{{ contact.notes }}</div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Right Column: Meta & Quick Details -->
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <h3 style="font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-info-circle" style="color: var(--info);"></i> Record Metadata
+          </h3>
+        </div>
+        <div class="card-body">
+          <div style="display: flex; flex-direction: column; gap: 1rem; font-size: 0.9rem;">
+            <div>
+              <span class="detail-label">Favorite Status</span>
+              <div style="font-weight: 600; margin-top: 0.2rem; display: flex; align-items: center; gap: 0.4rem;">
+                {% if contact.is_favorite %}
+                  <span style="color: var(--star-gold);"><i class="fas fa-star"></i> Favorite</span>
+                {% else %}
+                  <span style="color: var(--text-muted);"><i class="far fa-star"></i> Standard</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div>
+              <span class="detail-label">Category</span>
+              <div style="font-weight: 600; margin-top: 0.2rem;">
+                {{ contact.category_name }}
+              </div>
+            </div>
+
+            <div>
+              <span class="detail-label">Date Created</span>
+              <div style="color: var(--text-secondary); margin-top: 0.2rem;">
+                {{ contact.created_at.strftime('%b %d, %Y at %I:%M %p') }}
+              </div>
+            </div>
+
+            <div>
+              <span class="detail-label">Last Updated</span>
+              <div style="color: var(--text-secondary); margin-top: 0.2rem;">
+                {{ contact.updated_at.strftime('%b %d, %Y at %I:%M %p') }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

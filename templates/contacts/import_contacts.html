@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Import Contacts from CSV &bull; Connectly{% endblock %}
+
+{% block content %}
+<div style="max-width: 860px; margin: 0 auto;">
+  <!-- Back Button & Header -->
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <a href="{{ url_for('contacts.dashboard') }}" class="btn btn-secondary btn-icon" title="Back to Dashboard">
+        <i class="fas fa-arrow-left"></i>
+      </a>
+      <div>
+        <h1 style="font-size: 1.75rem; font-weight: 800; letter-spacing: -0.02em;">Import Contacts</h1>
+        <p style="color: var(--text-secondary); font-size: 0.95rem;">Upload a CSV file to bulk add contacts to your directory</p>
+      </div>
+    </div>
+    <a href="{{ url_for('data_io.download_sample_csv') }}" class="btn btn-outline btn-sm">
+      <i class="fas fa-download"></i> Download CSV Template
+    </a>
+  </div>
+
+  <!-- Import Results Summary Banner (if just imported) -->
+  {% if summary %}
+    <div class="card" style="margin-bottom: 2rem; border-left: 4px solid var(--primary);">
+      <div class="card-header">
+        <h3 style="font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fas fa-clipboard-check" style="color: var(--primary);"></i> Import Summary Report
+        </h3>
+      </div>
+      <div class="card-body">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+          <div style="background: var(--success-light); color: var(--success-text); padding: 1rem; border-radius: var(--radius-md); text-align: center;">
+            <div style="font-size: 1.75rem; font-weight: 800;">{{ imported }}</div>
+            <div style="font-size: 0.85rem; font-weight: 600;">Imported Successfully</div>
+          </div>
+          <div style="background: var(--warning-light); color: var(--warning-text); padding: 1rem; border-radius: var(--radius-md); text-align: center;">
+            <div style="font-size: 1.75rem; font-weight: 800;">{{ duplicates }}</div>
+            <div style="font-size: 0.85rem; font-weight: 600;">Duplicates Skipped</div>
+          </div>
+          <div style="background: var(--danger-light); color: var(--danger-text); padding: 1rem; border-radius: var(--radius-md); text-align: center;">
+            <div style="font-size: 1.75rem; font-weight: 800;">{{ invalid }}</div>
+            <div style="font-size: 0.85rem; font-weight: 600;">Invalid Rows Skipped</div>
+          </div>
+        </div>
+
+        {% if error_details %}
+          <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.5rem;">Detailed Row Log:</h4>
+          <div style="max-height: 180px; overflow-y: auto; background: var(--bg-tertiary); padding: 0.85rem; border-radius: var(--radius-md); font-size: 0.825rem; font-family: monospace;">
+            {% for item in error_details %}
+              <div style="margin-bottom: 0.25rem;">&bull; {{ item }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+      <div class="card-footer">
+        <a href="{{ url_for('contacts.dashboard') }}" class="btn btn-primary btn-sm">
+          <i class="fas fa-eye"></i> View Contacts in Dashboard
+        </a>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Upload Card -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('data_io.import_contacts') }}" enctype="multipart/form-data">
+        <div class="dropzone-box" onclick="document.getElementById('csv_file_input').click();">
+          <div class="dropzone-icon">
+            <i class="fas fa-cloud-upload-alt"></i>
+          </div>
+          <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;">Choose or Drag & Drop CSV File</h3>
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
+            Click to browse your device or drag your file here (.csv up to 10MB)
+          </p>
+          <input 
+            type="file" 
+            id="csv_file_input" 
+            name="csv_file" 
+            accept=".csv,text/csv" 
+            style="display: none;" 
+            required
+            onchange="document.getElementById('file-selected-name').textContent = this.files[0] ? this.files[0].name : '';"
+          >
+          <div id="file-selected-name" style="font-weight: 700; color: var(--primary); margin-bottom: 1rem;"></div>
+          <button type="button" class="btn btn-secondary btn-sm">Select CSV File</button>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end;">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-file-import"></i> Upload and Start Import
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Expected CSV Format Documentation -->
+  <div class="card">
+    <div class="card-header">
+      <h3 style="font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fas fa-table" style="color: var(--info);"></i> Expected CSV Headers & Format
+      </h3>
+    </div>
+    <div class="card-body">
+      <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem;">
+        Your CSV must have a header row with column names. The importer is flexible with column casing and common alias names.
+      </p>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Column</th>
+              <th>Required</th>
+              <th>Description / Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>first_name</code></td>
+              <td><span class="required" style="font-weight: 700;">Yes</span></td>
+              <td>Contact's first name (e.g., <em>Sarah</em>)</td>
+            </tr>
+            <tr>
+              <td><code>last_name</code></td>
+              <td>No</td>
+              <td>Contact's last name (e.g., <em>Connor</em>)</td>
+            </tr>
+            <tr>
+              <td><code>phone</code></td>
+              <td>At least 1 method</td>
+              <td>Primary contact number (e.g., <em>+1 555-234-5678</em>)</td>
+            </tr>
+            <tr>
+              <td><code>email</code></td>
+              <td>At least 1 method</td>
+              <td>Valid email address (e.g., <em>sarah@cyberdyne.io</em>)</td>
+            </tr>
+            <tr>
+              <td><code>alternate_phone</code></td>
+              <td>No</td>
+              <td>Secondary or mobile number</td>
+            </tr>
+            <tr>
+              <td><code>company</code></td>
+              <td>No</td>
+              <td>Organization name (e.g., <em>Cyberdyne Systems</em>)</td>
+            </tr>
+            <tr>
+              <td><code>job_title</code></td>
+              <td>No</td>
+              <td>Position or role (e.g., <em>Chief Security Officer</em>)</td>
+            </tr>
+            <tr>
+              <td><code>category</code></td>
+              <td>No</td>
+              <td>Work, Family, Friends, Clients, University, Other (or custom)</td>
+            </tr>
+            <tr>
+              <td><code>city</code></td>
+              <td>No</td>
+              <td>City or Region (e.g., <em>San Francisco</em>)</td>
+            </tr>
+            <tr>
+              <td><code>birthday</code></td>
+              <td>No</td>
+              <td>Date in <code>YYYY-MM-DD</code> or <code>MM/DD/YYYY</code> format</td>
+            </tr>
+            <tr>
+              <td><code>notes</code></td>
+              <td>No</td>
+              <td>Free-text notes and descriptions</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

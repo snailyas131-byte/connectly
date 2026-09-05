@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ contact.full_name }} &bull; Connectly{% endblock %}
+
+{% block content %}
+<div class="form-container">
+  <!-- Back Button & Header -->
+  <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;">
+    <a href="{{ url_for('contacts.view_contact', contact_id=contact.id) }}" class="btn btn-secondary btn-icon" title="Back to Contact">
+      <i class="fas fa-arrow-left"></i>
+    </a>
+    <div>
+      <h1 style="font-size: 1.75rem; font-weight: 800; letter-spacing: -0.02em;">Edit Contact</h1>
+      <p style="color: var(--text-secondary); font-size: 0.95rem;">Update information for <strong>{{ contact.full_name }}</strong></p>
+    </div>
+  </div>
+
+  <!-- Realtime Duplicate Warning Container -->
+  <div id="realtime-duplicate-warning" style="display: none;"></div>
+
+  <!-- Hidden contact ID for duplicate detector exclusion -->
+  <input type="hidden" id="contact_id" value="{{ contact.id }}">
+
+  <!-- Server Duplicate Warning Alert (if triggered) -->
+  {% if has_duplicate_warning %}
+    <div class="duplicate-warning-box">
+      <i class="fas fa-exclamation-triangle" style="font-size: 1.5rem; margin-top: 0.15rem;"></i>
+      <div>
+        <strong>Potential Duplicate Contact Detected:</strong>
+        <ul style="margin: 0.4rem 0 0.8rem 1.25rem;">
+          {% for msg in duplicate_messages %}
+            <li>{{ msg }}</li>
+          {% endfor %}
+        </ul>
+        <p style="font-size: 0.875rem;">If you wish to proceed and save changes regardless, check the box below and click Update.</p>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <form method="POST" action="{{ url_for('contacts.edit_contact', contact_id=contact.id) }}" enctype="multipart/form-data">
+      <div class="card-body">
+        <!-- Profile Picture Upload Section -->
+        <div class="form-group" style="margin-bottom: 2rem;">
+          <label class="form-label">Profile Picture</label>
+          <div class="avatar-upload-wrap">
+            {% if contact.profile_picture %}
+              <img 
+                id="avatar_preview" 
+                src="{{ url_for('static', filename='uploads/avatars/' + contact.profile_picture) }}" 
+                alt="{{ contact.full_name }}" 
+                class="avatar-preview-img"
+              >
+            {% else %}
+              <img 
+                id="avatar_preview" 
+                src="{{ url_for('static', filename='images/default-avatar.svg') }}" 
+                alt="Avatar Preview" 
+                class="avatar-preview-img"
+              >
+            {% endif %}
+
+            <div>
+              <input 
+                type="file" 
+                id="profile_picture_input" 
+                name="profile_picture" 
+                accept="image/png, image/jpeg, image/jpg, image/webp, image/gif"
+                style="font-size: 0.875rem;"
+              >
+              <p style="font-size: 0.775rem; color: var(--text-muted); margin-top: 0.4rem;">
+                Supported: PNG, JPG, JPEG, WEBP (Max 5MB)
+              </p>
+              {% if contact.profile_picture %}
+                <label class="form-check" style="margin-top: 0.5rem; font-size: 0.825rem; color: var(--danger);">
+                  <input type="checkbox" name="remove_picture" value="1">
+                  <span>Remove current profile photo</span>
+                </label>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <!-- First Name -->
+          <div class="form-group">
+            <label for="first_name" class="form-label">First Name <span class="required">*</span></label>
+            <input 
+              type="text" 
+              id="first_name" 
+              name="first_name" 
+              class="form-control" 
+              value="{{ form_data.get('first_name', '') }}"
+              required
+            >
+          </div>
+
+          <!-- Last Name -->
+          <div class="form-group">
+            <label for="last_name" class="form-label">Last Name</label>
+            <input 
+              type="text" 
+              id="last_name" 
+              name="last_name" 
+              class="form-control" 
+              value="{{ form_data.get('last_name', '') }}"
+            >
+          </div>
+
+          <!-- Primary Phone -->
+          <div class="form-group">
+            <label for="contact_phone" class="form-label">Primary Phone <span style="font-weight: 400; color: var(--text-muted);">(or email required)</span></label>
+            <input 
+              type="tel" 
+              id="contact_phone" 
+              name="phone" 
+              class="form-control" 
+              value="{{ form_data.get('phone', '') }}"
+            >
+          </div>
+
+          <!-- Alternate Phone -->
+          <div class="form-group">
+            <label for="alternate_phone" class="form-label">Alternate Phone</label>
+            <input 
+              type="tel" 
+              id="alternate_phone" 
+              name="alternate_phone" 
+              class="form-control" 
+              value="{{ form_data.get('alternate_phone', '') }}"
+            >
+          </div>
+
+          <!-- Email -->
+          <div class="form-group">
+            <label for="contact_email" class="form-label">Email Address <span style="font-weight: 400; color: var(--text-muted);">(or phone required)</span></label>
+            <input 
+              type="email" 
+              id="contact_email" 
+              name="email" 
+              class="form-control" 
+              value="{{ form_data.get('email', '') }}"
+            >
+          </div>
+
+          <!-- Category -->
+          <div class="form-group">
+            <label for="category_id" class="form-label">Category</label>
+            <select id="category_id" name="category_id" class="form-control">
+              <option value="">-- Select Category --</option>
+              {% for cat in categories %}
+                <option value="{{ cat.id }}" {{ 'selected' if form_data.get('category_id') == cat.id|string else '' }}>
+                  {{ cat.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Company -->
+          <div class="form-group">
+            <label for="company" class="form-label">Company / Organization</label>
+            <input 
+              type="text" 
+              id="company" 
+              name="company" 
+              class="form-control" 
+              value="{{ form_data.get('company', '') }}"
+            >
+          </div>
+
+          <!-- Job Title -->
+          <div class="form-group">
+            <label for="job_title" class="form-label">Job Title</label>
+            <input 
+              type="text" 
+              id="job_title" 
+              name="job_title" 
+              class="form-control" 
+              value="{{ form_data.get('job_title', '') }}"
+            >
+          </div>
+
+          <!-- City -->
+          <div class="form-group">
+            <label for="city" class="form-label">City / Region</label>
+            <input 
+              type="text" 
+              id="city" 
+              name="city" 
+              class="form-control" 
+              value="{{ form_data.get('city', '') }}"
+            >
+          </div>
+
+          <!-- Birthday -->
+          <div class="form-group">
+            <label for="birthday" class="form-label">Birthday</label>
+            <input 
+              type="date" 
+              id="birthday" 
+              name="birthday" 
+              class="form-control" 
+              value="{{ form_data.get('birthday', '') }}"
+            >
+          </div>
+
+          <!-- Address -->
+          <div class="form-group full-width">
+            <label for="address" class="form-label">Physical Address</label>
+            <input 
+              type="text" 
+              id="address" 
+              name="address" 
+              class="form-control" 
+              value="{{ form_data.get('address', '') }}"
+            >
+          </div>
+
+          <!-- Notes -->
+          <div class="form-group full-width">
+            <label for="notes" class="form-label">Notes & Extra Information</label>
+            <textarea 
+              id="notes" 
+              name="notes" 
+              class="form-control" 
+            >{{ form_data.get('notes', '') }}</textarea>
+          </div>
+
+          <!-- Favorite & Options -->
+          <div class="form-group full-width" style="display: flex; flex-direction: column; gap: 0.75rem; padding-top: 0.5rem;">
+            <label class="form-check">
+              <input type="checkbox" name="is_favorite" value="1" {{ 'checked' if form_data.get('is_favorite') else '' }}>
+              <span style="font-weight: 600;"><i class="fas fa-star" style="color: var(--star-gold);"></i> Mark as Favorite</span>
+            </label>
+
+            {% if has_duplicate_warning %}
+              <label class="form-check" style="color: var(--warning-text); font-weight: 600;">
+                <input type="checkbox" name="ignore_duplicate" value="1">
+                <span>I understand this might match another contact, update anyway</span>
+              </label>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="card-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <a href="{{ url_for('contacts.view_contact', contact_id=contact.id) }}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save"></i> Save Changes
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+

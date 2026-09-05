@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard &bull; Connectly{% endblock %}
+
+{% block content %}
+<!-- Dashboard Top Bar -->
+<div class="dashboard-header">
+  <div class="dashboard-title-group">
+    <h1>Welcome back, {{ current_user.full_name.split()[0] }} 👋</h1>
+    <p>Manage and organize your network and contact directory.</p>
+  </div>
+  <div class="dashboard-actions">
+    <a href="{{ url_for('contacts.add_contact') }}" class="btn btn-primary">
+      <i class="fas fa-plus"></i>
+      <span>New Contact</span>
+    </a>
+    <a href="{{ url_for('data_io.import_contacts') }}" class="btn btn-secondary" title="Import Contacts">
+      <i class="fas fa-file-import"></i>
+      <span>Import CSV</span>
+    </a>
+    <a href="{{ url_for('data_io.export_contacts') }}" class="btn btn-outline" title="Export Contacts">
+      <i class="fas fa-file-export"></i>
+      <span>Export</span>
+    </a>
+  </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon primary">
+      <i class="fas fa-users"></i>
+    </div>
+    <div class="stat-info">
+      <span class="stat-label">Total Contacts</span>
+      <span class="stat-value">{{ stats.total }}</span>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon warning">
+      <i class="fas fa-star"></i>
+    </div>
+    <div class="stat-info">
+      <span class="stat-label">Favorites</span>
+      <span class="stat-value">{{ stats.favorites }}</span>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon success">
+      <i class="fas fa-briefcase"></i>
+    </div>
+    <div class="stat-info">
+      <span class="stat-label">Work Contacts</span>
+      <span class="stat-value">{{ stats.work }}</span>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon info">
+      <i class="fas fa-clock"></i>
+    </div>
+    <div class="stat-info">
+      <span class="stat-label">Recently Added</span>
+      <span class="stat-value">{{ stats.recent_count }}</span>
+    </div>
+  </div>
+</div>
+
+<div class="profile-grid">
+  <!-- Left Main Area: Filters & Contacts List -->
+  <div>
+    <!-- Filter & Sort Bar -->
+    <div class="filter-bar">
+      <!-- Filter Pills -->
+      <div class="filter-pills">
+        <a 
+          href="{{ url_for('contacts.dashboard', sort=sort_by) }}" 
+          class="filter-pill {{ 'active' if not category_filter and not favorites_only else '' }}"
+        >
+          All ({{ stats.total }})
+        </a>
+
+        <a 
+          href="{{ url_for('contacts.dashboard', favorites=1, sort=sort_by) }}" 
+          class="filter-pill {{ 'active' if favorites_only else '' }}"
+        >
+          <i class="fas fa-star" style="color: var(--star-gold); margin-right: 0.25rem;"></i> Favorites ({{ stats.favorites }})
+        </a>
+
+        {% for cat in categories %}
+          <a 
+            href="{{ url_for('contacts.dashboard', category=cat.name, sort=sort_by) }}" 
+            class="filter-pill {{ 'active' if category_filter|lower == cat.name|lower else '' }}"
+          >
+            {{ cat.name }}
+          </a>
+        {% endfor %}
+      </div>
+
+      <!-- Sorting Selector -->
+      <div class="sort-group">
+        <label for="sort-select"><i class="fas fa-sort-amount-down"></i> Sort:</label>
+        <select 
+          id="sort-select" 
+          class="sort-select" 
+          onchange="location.href = this.value;"
+        >
+          <option value="{{ url_for('contacts.dashboard', category=category_filter, favorites=1 if favorites_only else None, sort='name_asc') }}" {{ 'selected' if sort_by == 'name_asc' else '' }}>Name (A - Z)</option>
+          <option value="{{ url_for('contacts.dashboard', category=category_filter, favorites=1 if favorites_only else None, sort='name_desc') }}" {{ 'selected' if sort_by == 'name_desc' else '' }}>Name (Z - A)</option>
+          <option value="{{ url_for('contacts.dashboard', category=category_filter, favorites=1 if favorites_only else None, sort='newest') }}" {{ 'selected' if sort_by == 'newest' else '' }}>Newest First</option>
+          <option value="{{ url_for('contacts.dashboard', category=category_filter, favorites=1 if favorites_only else None, sort='oldest') }}" {{ 'selected' if sort_by == 'oldest' else '' }}>Oldest First</option>
+          <option value="{{ url_for('contacts.dashboard', category=category_filter, favorites=1 if favorites_only else None, sort='updated') }}" {{ 'selected' if sort_by == 'updated' else '' }}>Recently Updated</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Empty State: Global (No Contacts At All) -->
+    {% if stats.total == 0 %}
+      <div class="empty-state">
+        <div class="empty-icon">
+          <i class="fas fa-user-friends"></i>
+        </div>
+        <h2 class="empty-title">No contacts yet</h2>
+        <p class="empty-description">
+          Create your first contact to start building your organized address book, or import from a CSV file.
+        </p>
+        <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+          <a href="{{ url_for('contacts.add_contact') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> + Add Contact
+          </a>
+          <a href="{{ url_for('data_io.import_contacts') }}" class="btn btn-secondary">
+            <i class="fas fa-file-import"></i> Import CSV
+          </a>
+        </div>
+      </div>
+
+    <!-- Empty State: Filter / Search returns 0 -->
+    {% elif contacts|length == 0 %}
+      <div class="empty-state">
+        <div class="empty-icon" style="background: var(--warning-light); color: var(--warning);">
+          <i class="fas fa-search-minus"></i>
+        </div>
+        <h2 class="empty-title">No matching contacts found</h2>
+        <p class="empty-description">
+          No contacts match your current filter criteria: 
+          {% if search_query %}<strong>"{{ search_query }}"</strong>{% endif %}
+          {% if category_filter %}<strong>Category: {{ category_filter }}</strong>{% endif %}
+          {% if favorites_only %}<strong>Favorites</strong>{% endif %}.
+        </p>
+        <a href="{{ url_for('contacts.dashboard') }}" class="btn btn-secondary">
+          <i class="fas fa-times"></i> Clear Filters
+        </a>
+      </div>
+
+    <!-- Contacts Grid -->
+    {% else %}
+      <div class="contacts-grid">
+        {% for contact in contacts %}
+          <div 
+            class="contact-card" 
+            data-name="{{ contact.full_name }}" 
+            data-phone="{{ contact.phone or '' }}" 
+            data-email="{{ contact.email or '' }}" 
+            data-company="{{ contact.company or '' }}" 
+            data-category="{{ contact.category_name }}" 
+            data-city="{{ contact.city or '' }}"
+          >
+            <div>
+              <!-- Top Row: Avatar & Name & Favorite Toggle -->
+              <div class="contact-card-top">
+                {% if contact.profile_picture %}
+                  <img 
+                    src="{{ url_for('static', filename='uploads/avatars/' + contact.profile_picture) }}" 
+                    alt="{{ contact.full_name }}" 
+                    class="avatar"
+                  >
+                {% else %}
+                  <div class="avatar-initials">
+                    {{ contact.initials }}
+                  </div>
+                {% endif %}
+
+                <div class="contact-meta">
+                  <div class="contact-name-row">
+                    <a href="{{ url_for('contacts.view_contact', contact_id=contact.id) }}" class="contact-name">
+                      {{ contact.full_name }}
+                    </a>
+
+                    <!-- Favorite Star Button -->
+                    <form 
+                      class="favorite-toggle-form" 
+                      action="{{ url_for('contacts.toggle_favorite', contact_id=contact.id) }}" 
+                      method="POST" 
+                      style="display: inline;"
+                    >
+                      <button 
+                        type="submit" 
+                        class="favorite-btn {{ 'is-favorite' if contact.is_favorite else '' }}" 
+                        title="{{ 'Remove from favorites' if contact.is_favorite else 'Add to favorites' }}"
+                      >
+                        <i class="{{ 'fas' if contact.is_favorite else 'far' }} fa-star"></i>
+                      </button>
+                    </form>
+                  </div>
+
+                  {% if contact.job_title or contact.company %}
+                    <p class="contact-title-company">
+                      {{ contact.job_title or '' }}{{ ' at ' if contact.job_title and contact.company else '' }}{{ contact.company or '' }}
+                    </p>
+                  {% endif %}
+
+                  {% if contact.category_rel %}
+                    <span class="contact-category-badge">{{ contact.category_rel.name }}</span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Contact Info Snippets -->
+              <div class="contact-info-list">
+                {% if contact.phone %}
+                  <div class="info-item" title="Phone">
+                    <i class="fas fa-phone-alt"></i>
+                    <a href="tel:{{ contact.phone }}" style="color: inherit;">{{ contact.phone }}</a>
+                  </div>
+                {% endif %}
+
+                {% if contact.email %}
+                  <div class="info-item" title="Email">
+                    <i class="fas fa-envelope"></i>
+                    <a href="mailto:{{ contact.email }}" style="color: inherit;">{{ contact.email }}</a>
+                  </div>
+                {% endif %}
+
+                {% if contact.city %}
+                  <div class="info-item" title="City">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>{{ contact.city }}</span>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Bottom Actions -->
+            <div class="contact-card-actions">
+              <a href="{{ url_for('contacts.view_contact', contact_id=contact.id) }}" class="btn btn-secondary btn-sm" title="View Details">
+                <i class="fas fa-eye"></i> View
+              </a>
+              <div style="display: flex; gap: 0.4rem;">
+                <a href="{{ url_for('contacts.edit_contact', contact_id=contact.id) }}" class="btn btn-outline btn-sm btn-icon" title="Edit Contact">
+                  <i class="fas fa-pen"></i>
+                </a>
+                <button 
+                  type="button" 
+                  class="btn btn-danger-outline btn-sm btn-icon delete-contact-btn" 
+                  data-id="{{ contact.id }}" 
+                  data-name="{{ contact.full_name }}"
+                  data-url="{{ url_for('contacts.delete_contact', contact_id=contact.id) }}"
+                  title="Delete Contact"
+                >
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- Realtime Search Empty State Container -->
+      <div id="search-empty-state" class="empty-state" style="display: none;">
+        <div class="empty-icon" style="background: var(--warning-light); color: var(--warning);">
+          <i class="fas fa-search"></i>
+        </div>
+        <h2 class="empty-title">No instant matches found</h2>
+        <p class="empty-description">Try adjusting your search keywords.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Right Sidebar: Analytics & Recently Added -->
+  <aside>
+    <!-- Category Distribution Card -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <h3 style="font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fas fa-chart-pie" style="color: var(--primary);"></i> Category Breakdown
+        </h3>
+      </div>
+      <div class="card-body">
+        <div style="position: relative; height: 210px;">
+          <canvas id="categoryChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recently Added Contacts Card -->
+    <div class="card">
+      <div class="card-header">
+        <h3 style="font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fas fa-history" style="color: var(--info);"></i> Recently Added
+        </h3>
+      </div>
+      <div class="card-body" style="padding: 0.75rem 1.25rem;">
+        {% if recent_contacts %}
+          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            {% for rc in recent_contacts %}
+              <a 
+                href="{{ url_for('contacts.view_contact', contact_id=rc.id) }}" 
+                style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); color: inherit;"
+              >
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <div class="user-avatar-mini" style="width: 2rem; height: 2rem; font-size: 0.8rem;">
+                    {{ rc.initials }}
+                  </div>
+                  <div>
+                    <div style="font-weight: 600; font-size: 0.9rem;">{{ rc.full_name }}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">{{ rc.category_name }}</div>
+                  </div>
+                </div>
+                <i class="fas fa-chevron-right" style="color: var(--text-muted); font-size: 0.8rem;"></i>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p style="color: var(--text-muted); font-size: 0.875rem; text-align: center; padding: 1.5rem 0;">
+            No recent contacts
+          </p>
+        {% endif %}
+      </div>
+    </div>
+  </aside>
+</div>
+{% endblock %}
